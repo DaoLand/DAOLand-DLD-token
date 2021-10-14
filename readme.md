@@ -2,4 +2,4 @@
 ```sh
 npm run coverage
 ```
-#### because @typechain needs to be initialized
+#### twice, because @typechain needs to be initialized
