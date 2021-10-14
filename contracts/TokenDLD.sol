@@ -9,7 +9,7 @@ contract TokenDLD is ERC20, AccessControl {
     using SafeERC20 for IERC20;
     
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    uint256 initialSupply = 1000000 * 10 ** 18; // 1_000_000 tokens(with 18 decimals)
+    uint256 public constant initialSupply = 1000000 * 10 ** 18; // 1_000_000 tokens(with 18 decimals)
 
     constructor(
         string memory name,
