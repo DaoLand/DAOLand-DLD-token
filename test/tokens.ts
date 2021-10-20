@@ -92,7 +92,7 @@ describe('Tokens', () => {
 		const MINTER_ROLE = await dls.MINTER_ROLE()
 
 		try {
-			await dls.connect(user0)['burn(address,uint256)'](owner.address, 1)
+			await dls.connect(user0).burn(owner.address, 1)
 		} catch (e: any) {
 			expect(e.message.toLowerCase()).to.equal(`VM Exception while processing transaction: reverted with reason string 'AccessControl: account ${user0.address} is missing role ${BURNER_ROLE}'`.toLowerCase())
 		}
@@ -105,7 +105,7 @@ describe('Tokens', () => {
 		await dls.grantRole(BURNER_ROLE, owner.address)
 		await dls.grantRole(MINTER_ROLE, owner.address)
 		const amount = '1000'
-		await dls['burn(address,uint256)'](owner.address, amount)
+		await dls.burn(owner.address, amount)
 		let supply = (await dls.totalSupply()).toString()
 		expect(supply).to.equal('999999999999999999999999000')
 		await dls.mint(owner.address, amount)

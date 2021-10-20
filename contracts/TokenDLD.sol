@@ -10,6 +10,7 @@ contract TokenDLD is ERC20, AccessControl {
     
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 public constant initialSupply = 1000000 * 10 ** 18; // 1_000_000 tokens(with 18 decimals)
+    address private owner;
 
     constructor(
         string memory name,
@@ -21,12 +22,23 @@ contract TokenDLD is ERC20, AccessControl {
         _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
 
         _mint(msg.sender, initialSupply);
+
+        owner = msg.sender;
     }
     
-    function withdrawToken(address token, uint256 amount) public payable onlyRole(ADMIN_ROLE) {
+    function withdrawToken(address token, uint256 amount) external onlyRole(ADMIN_ROLE) {
         IERC20(token).safeTransfer(
             msg.sender,
             amount
         );
+    }
+
+    function setOwner(address _newOnwer) external {
+        require(msg.sender == owner, "you are not owner");
+        owner = _newOnwer;
+    }
+
+    function getOwner() external view returns (address) {
+        return owner;
     }
 }
