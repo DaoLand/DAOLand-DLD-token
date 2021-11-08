@@ -7,30 +7,52 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract TokenDLD is ERC20, AccessControl {
     using SafeERC20 for IERC20;
-    
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    uint256 public constant initialSupply = 1000000 * 10 ** 18; // 1_000_000 tokens(with 18 decimals)
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    uint256 public constant initialSupply =  100_000_000*1e18; // 100M tokens(with 18 decimals)
     address private owner;
 
-    constructor(
-        string memory name,
-        string memory symbol
-    ) public ERC20(name, symbol) {
-        _setupRole(ADMIN_ROLE, msg.sender);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    mapping(address => bool) public whitelist;
+    mapping(address => bool) public blocklist;
 
-        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+    bool public paused;
+
+    modifier notBlocked(address _recipient) {
+        require(
+            !blocklist[msg.sender] && !blocklist[_recipient],
+            "You are in blocklist"
+        );
+        _;
+    }
+
+    modifier pausable(address _recipient) {
+        if (paused) {
+            require(
+                whitelist[msg.sender] || whitelist[_recipient],
+                "Only whitelisted users can transfer while token paused!"
+            );
+        }
+        _;
+    }
+
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(PAUSER_ROLE, msg.sender);
+        _setupRole(MINTER_ROLE, msg.sender);
 
         _mint(msg.sender, initialSupply);
 
         owner = msg.sender;
     }
-    
-    function withdrawToken(address token, uint256 amount) external onlyRole(ADMIN_ROLE) {
-        IERC20(token).safeTransfer(
-            msg.sender,
-            amount
-        );
+
+    function withdrawToken(address token, uint256 amount)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     function setOwner(address _newOnwer) external {
@@ -40,5 +62,31 @@ contract TokenDLD is ERC20, AccessControl {
 
     function getOwner() external view returns (address) {
         return owner;
+    }
+
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal override notBlocked(_to) pausable(_to) {
+        super._beforeTokenTransfer(_from, _to, _amount);
+    }
+
+    function setPause(bool _state) public onlyRole(ADMIN_ROLE) {
+        paused = _state;
+    }
+
+    function setWhiteStatus(address _user, bool _state)
+        public
+        onlyRole(ADMIN_ROLE)
+    {
+        whitelist[_user] = _state;
+    }
+
+    function setBlockStatus(address _user, bool _state)
+        public
+        onlyRole(ADMIN_ROLE)
+    {
+        blocklist[_user] = _state;
     }
 }

@@ -1,115 +1,114 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { ethers } from 'hardhat'
-import { expect } from 'chai'
+import BigNumber from "bignumber.js";
+import hre, { network, ethers } from "hardhat";
+import { Bytes, Contract, Signer } from "ethers";
+import { Artifact, HardhatRuntimeEnvironment } from "hardhat/types";
+import { Address } from "cluster";
+const Web3 = require("web3");
 
-import BigNumber from 'bignumber.js'
-BigNumber.config({ EXPONENTIAL_AT: 60 })
+var chai = require("chai");
+var chaiAsPromised = require("chai-as-promised");
 
-import { TokenDLS, TokenDLD } from '../typechain'
+chai.use(chaiAsPromised);
+var expect = chai.expect;
 
-import config from '../config'
-const DLD_INITIAL_SUPPLY = new BigNumber(config.DLD_INITIAL_SUPPLY).toString()
-const DLS_SUPPLY = new BigNumber('1000000000').shiftedBy(18).toString() // 1_000_000_000
+describe("TEST - DLD Token", function () {
+	let addr: any;
+	let DLD: Contract;
 
-let dls: TokenDLS
-let dld: TokenDLD
+	it("1: deploy token", async function () {
+		addr = await ethers.getSigners();
+		const Token = await ethers.getContractFactory("TokenDLD");
+		DLD = await Token.deploy(
+			"DLD Token",
+			"DLD");
+	});
 
-let owner: SignerWithAddress
-let user0: SignerWithAddress
-let user1: SignerWithAddress
 
-async function reDeploy() {
-	[owner, user0, user1] = await ethers.getSigners()
-	let TokenDLS = await ethers.getContractFactory('TokenDLS')
-	let TokenDLD = await ethers.getContractFactory('TokenDLD')
-	dls = await TokenDLS.deploy('TokenDLS', 'DLS') as TokenDLS
-	await dls.mint(owner.address, DLS_SUPPLY);
-	dld = await TokenDLD.deploy('TokenDLD', 'DLD') as TokenDLD
-}
 
-describe('Tokens', () => {
-	it('check name, symbol and balance', async () => {
-		await reDeploy()
-		const [
-			nameDLS,
-			symbolDLS,
-			balanceOwnerDLS,
-			nameDLD,
-			symbolDLD,
-			balanceOwnerDLD,
-		] = await Promise.all([
-			dls.name(),
-			dls.symbol(),
-			dls.balanceOf(owner.address),
-			dld.name(),
-			dld.symbol(),
-			dld.balanceOf(owner.address),
-		])
-		expect(nameDLS).to.equal('TokenDLS')
-		expect(nameDLD).to.equal('TokenDLD')
-		expect(symbolDLS).to.equal('DLS')
-		expect(symbolDLD).to.equal('DLD')
-		expect(balanceOwnerDLS).to.equal(DLS_SUPPLY)
-		expect(balanceOwnerDLD).to.equal(DLD_INITIAL_SUPPLY)
-	})
-	it('Send random token to DLS and withdraw back, and also should revert if caller is not admin', async () => {
-		await reDeploy()
-		const initBalance = (await dld.balanceOf(owner.address)).toString()
-		const amount = new BigNumber('1000').shiftedBy(18).toString()
-		await dld.transfer(dls.address, amount);
-		const balance = (await dld.balanceOf(dls.address)).toString();
-		expect(balance).to.equal(amount)
-		const ADMIN_ROLE = await dls.ADMIN_ROLE()
-		try {
-			await dls.connect(user0).withdrawToken(dld.address, amount)
-		} catch (e: any) {
-			expect(e.message.toLowerCase()).to.equal(`VM Exception while processing transaction: reverted with reason string 'AccessControl: account ${user0.address} is missing role ${ADMIN_ROLE}'`.toLowerCase())
-		}
-		await dls.withdrawToken(dld.address, amount)
-		const finalBalance = (await dld.balanceOf(owner.address)).toString()
-		expect(finalBalance).to.equal(initBalance)
-	})
-	it('Send random token to DLD and withdraw back, and also should revert if caller is not admin', async () => {
-		await reDeploy()
-		const initBalance = (await dls.balanceOf(owner.address)).toString()
-		const amount = new BigNumber('1000').shiftedBy(18).toString()
-		await dls.transfer(dld.address, amount);
-		const balance = (await dls.balanceOf(dld.address)).toString();
-		expect(balance).to.equal(amount)
-		const ADMIN_ROLE = await dld.ADMIN_ROLE()
-		try {
-			await dld.connect(user0).withdrawToken(dls.address, amount)
-		} catch (e: any) {
-			expect(e.message.toLowerCase()).to.equal(`VM Exception while processing transaction: reverted with reason string 'AccessControl: account ${user0.address} is missing role ${ADMIN_ROLE}'`.toLowerCase())
-		}
-		await dld.withdrawToken(dls.address, amount)
-		const finalBalance = (await dls.balanceOf(owner.address)).toString()
-		expect(finalBalance).to.equal(initBalance)
-	})
-	it('DLS burn and mint, and also should revert if caller is not admin', async () => {
-		await reDeploy()
-		const BURNER_ROLE = await dls.BURNER_ROLE()
-		const MINTER_ROLE = await dls.MINTER_ROLE()
+	it("2: balanceOf DLD", async function () {
+		expect(await DLD.balanceOf(addr[0].address)).to.equal(ethers.utils.parseEther("100000000"));
+	});
 
-		try {
-			await dls.connect(user0).burn(owner.address, 1)
-		} catch (e: any) {
-			expect(e.message.toLowerCase()).to.equal(`VM Exception while processing transaction: reverted with reason string 'AccessControl: account ${user0.address} is missing role ${BURNER_ROLE}'`.toLowerCase())
-		}
-		try {
-			await dls.connect(user0).mint(owner.address, 1)
-		} catch (e: any) {
-			expect(e.message.toLowerCase()).to.equal(`VM Exception while processing transaction: reverted with reason string 'AccessControl: account ${user0.address} is missing role ${MINTER_ROLE}'`.toLowerCase())
-		}
+	it("4: details DLD", async function () {
+		expect(await DLD.totalSupply()).to.equal(ethers.utils.parseEther("100000000"));
+		expect(await DLD.name()).to.equal('DLD Token');
+		expect(await DLD.symbol()).to.equal('DLD');
+	});
 
-		await dls.grantRole(BURNER_ROLE, owner.address)
-		await dls.grantRole(MINTER_ROLE, owner.address)
-		const amount = '1000'
-		await dls.burn(owner.address, amount)
-		let supply = (await dls.totalSupply()).toString()
-		expect(supply).to.equal('999999999999999999999999000')
-		await dls.mint(owner.address, amount)
-		supply = (await dls.totalSupply()).toString()
-		expect(supply).to.equal('1000000000000000000000000000')
-	})
-})
+
+	it("7: transfer DLD", async function () {
+		await DLD.connect(addr[0]).transfer(addr[1].address, ethers.utils.parseEther("100"));
+	});
+
+	it("8: balanceOf DLD", async function () {
+		expect(await DLD.balanceOf(addr[0].address)).to.equal(ethers.utils.parseEther('99999900'));
+		expect(await DLD.balanceOf(addr[1].address)).to.equal(ethers.utils.parseEther('100'));
+	});
+
+	it("9: approve DLD", async function () {
+		await DLD.connect(addr[0]).approve(addr[3].address, ethers.utils.parseEther("22"));
+		await DLD.connect(addr[1]).approve(addr[4].address, ethers.utils.parseEther("11"));
+	});
+
+	it("10: allowance DLD", async function () {
+		expect(await DLD.allowance(addr[0].address, addr[3].address)).to.equal('22000000000000000000');
+		expect(await DLD.allowance(addr[0].address, addr[2].address)).to.equal('0');
+		expect(await DLD.allowance(addr[1].address, addr[4].address)).to.equal('11000000000000000000');
+	});
+
+	it("11: decreaseAllowance DLD", async function () {
+		await DLD.connect(addr[0]).decreaseAllowance(addr[3].address, '17000000000000000000');
+		await DLD.connect(addr[1]).decreaseAllowance(addr[4].address, '3000000000000000000');
+	});
+
+	it("12: allowance DLD", async function () {
+		expect(await DLD.allowance(addr[0].address, addr[3].address)).to.equal('5000000000000000000');
+		expect(await DLD.allowance(addr[0].address, addr[2].address)).to.equal('0');
+		expect(await DLD.allowance(addr[1].address, addr[4].address)).to.equal('8000000000000000000');
+	});
+
+	it("13: transferFrom DLD", async function () {
+		await DLD.connect(addr[3]).transferFrom(addr[0].address, addr[3].address, ethers.utils.parseEther('3'));
+		await DLD.connect(addr[4]).transferFrom(addr[1].address, addr[5].address, ethers.utils.parseEther('4'));
+	});
+
+	it("14: allowance DLD", async function () {
+		expect(await DLD.allowance(addr[0].address, addr[3].address)).to.equal('2000000000000000000');
+		expect(await DLD.allowance(addr[0].address, addr[2].address)).to.equal('0');
+		expect(await DLD.allowance(addr[1].address, addr[4].address)).to.equal('4000000000000000000');
+	});
+
+	it("15: balanceOf DLD", async function () {
+		expect(await DLD.balanceOf(addr[0].address)).to.equal(ethers.utils.parseEther('99999897'));
+		expect(await DLD.balanceOf(addr[1].address)).to.equal(ethers.utils.parseEther('96'));
+		expect(await DLD.balanceOf(addr[2].address)).to.equal('0');
+		expect(await DLD.balanceOf(addr[3].address)).to.equal(ethers.utils.parseEther('3'));
+		expect(await DLD.balanceOf(addr[4].address)).to.equal(ethers.utils.parseEther('0'));
+		expect(await DLD.balanceOf(addr[5].address)).to.equal(ethers.utils.parseEther('4'));
+	});
+
+	it("14: pause DLD", async function () {
+		await DLD.setPause(true);
+	});
+
+	it("14: pause transfer", async function () {
+		await expect( DLD.connect(addr[0]).transfer(addr[1].address, ethers.utils.parseEther("100"))).to.be.revertedWith('Only whitelisted users can transfer while token paused!');
+		await DLD.connect(addr[0]).setWhiteStatus(addr[0].address,true);
+		await DLD.connect(addr[0]).transfer(addr[1].address, ethers.utils.parseEther("100"));
+		expect(await DLD.balanceOf(addr[0].address)).to.equal(ethers.utils.parseEther('99999797'));
+		expect(await DLD.balanceOf(addr[1].address)).to.equal(ethers.utils.parseEther('196'));
+	});
+	it("14: pause DLD", async function () {
+		await DLD.setPause(false);
+
+		await DLD.connect(addr[1]).transfer(addr[0].address, ethers.utils.parseEther("100"));
+		expect(await DLD.balanceOf(addr[0].address)).to.equal(ethers.utils.parseEther('99999897'));
+		expect(await DLD.balanceOf(addr[1].address)).to.equal(ethers.utils.parseEther('96'));
+	});
+
+
+
+
+
+
+});
