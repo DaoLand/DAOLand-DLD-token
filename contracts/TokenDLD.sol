@@ -10,7 +10,6 @@ contract TokenDLD is ERC20, AccessControl {
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 public constant initialSupply =  100_000_000*1e18; // 100M tokens(with 18 decimals)
     address private owner;
 
@@ -41,7 +40,6 @@ contract TokenDLD is ERC20, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(ADMIN_ROLE, msg.sender);
         _setupRole(PAUSER_ROLE, msg.sender);
-        _setupRole(MINTER_ROLE, msg.sender);
 
         _mint(msg.sender, initialSupply);
 
