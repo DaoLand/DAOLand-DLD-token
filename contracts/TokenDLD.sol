@@ -14,7 +14,7 @@ interface IAntisnipe {
     ) external returns (bool);
 }
 
-contract TokeDLD is ERC20, AccessControl {
+contract TokenDLD is ERC20, AccessControl {
     using SafeERC20 for IERC20;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
