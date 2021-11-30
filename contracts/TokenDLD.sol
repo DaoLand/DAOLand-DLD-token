@@ -21,7 +21,7 @@ contract TokenDLD is ERC20, AccessControl {
     address private owner;
     uint256 public constant initialSupply = 100_000_000 * 1e18; // 1_000_000 tokens(with 18 decimals)
 
-    bool public antisnipeEnabled = true;
+    bool public antisnipeEnabled;
     IAntisnipe public antisnipe =
         IAntisnipe(0x2E5dDfb5F950fd98fb159E1FA9ABc8DB12DCcFCf);
 
@@ -62,8 +62,12 @@ contract TokenDLD is ERC20, AccessControl {
         }
     }
 
-    function setAntisnipeDisable() external onlyRole(ADMIN_ROLE) {
+    function setAntisnipeDisable(bool _antisnipeEnabled)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         require(antisnipeEnabled);
-        antisnipeEnabled = false;
+        antisnipeEnabled = _antisnipeEnabled;
     }
 }
+
